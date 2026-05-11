@@ -15,14 +15,24 @@ export const Panel: React.FC = () => {
   const [streamBuffer, setStreamBuffer] = useState('');
   const [model, setModel] = useState('');
   const [input, setInput] = useState('');
+  const [activeMemoryCount, setActiveMemoryCount] = useState(0);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     window.cc.send(window.cc.channels.PANEL_READY);
-    const offText = window.cc.on(window.cc.channels.CONTEXT_TEXT, (t: string) => { setContextText(t); setContextImage(''); });
+    const offText = window.cc.on(window.cc.channels.CONTEXT_TEXT, (t: string) => {
+      setContextText(t);
+      setContextImage('');
+      window.cc.invoke(window.cc.channels.MEMORY_COUNT)
+        .then((count: unknown) => setActiveMemoryCount(Number(count) || 0))
+        .catch(() => setActiveMemoryCount(0));
+    });
     const offImg  = window.cc.on(window.cc.channels.CONTEXT_IMAGE, (b: string) => {
       setContextImage(b);
       setContextText('');
+      window.cc.invoke(window.cc.channels.MEMORY_COUNT)
+        .then((count: unknown) => setActiveMemoryCount(Number(count) || 0))
+        .catch(() => setActiveMemoryCount(0));
       // Pick best available vision model from installed models
       Promise.all([
         window.cc.invoke(window.cc.channels.HARDWARE_INFO),
@@ -84,7 +94,14 @@ export const Panel: React.FC = () => {
     <div className="frosted h-screen w-screen flex flex-col p-3 gap-2">
       <div className="drag-region flex justify-between items-center text-xs text-white/70 select-none">
         <span>ContextChat</span>
-        <button onClick={close} className="no-drag px-2 hover:text-white">✕</button>
+        <div className="no-drag flex items-center gap-1">
+          {activeMemoryCount > 0 && (
+            <span title={`${activeMemoryCount} memories active`} className="text-white/50 text-[10px]">
+              🧠 {activeMemoryCount}
+            </span>
+          )}
+          <button onClick={close} className="px-2 hover:text-white">✕</button>
+        </div>
       </div>
       <ContextPreview text={contextText} image={contextImage} />
       <div className="border-t border-white/10" />
