@@ -44,3 +44,11 @@ export interface HistoryEntry {
   context: { type: 'text' | 'image'; value: string };
   messages: Message[];
 }
+
+export interface Memory {
+  id: string;
+  content: string;
+  type: 'fact' | 'preference' | 'project';
+  source: 'auto' | 'manual';
+  createdAt: number;
+}
