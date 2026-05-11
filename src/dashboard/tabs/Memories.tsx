@@ -16,14 +16,14 @@ export default function Memories() {
   useEffect(() => { load(); }, []);
 
   const handleDelete = async (id: string) => {
-    await window.cc.invoke(window.cc.channels.MEMORY_DELETE, id);
+    await window.cc.invoke(window.cc.channels.MEMORY_DELETE, id).catch(() => {});
     load();
   };
 
   const handleAdd = async () => {
     const trimmed = newContent.trim();
     if (!trimmed) return;
-    await window.cc.invoke(window.cc.channels.MEMORY_ADD, { content: trimmed, type: newType });
+    await window.cc.invoke(window.cc.channels.MEMORY_ADD, { content: trimmed, type: newType }).catch(() => {});
     setNewContent('');
     load();
   };
@@ -63,7 +63,7 @@ export default function Memories() {
         </p>
       ) : (
         <ul className="flex flex-col gap-2">
-          {memories.sort((a, b) => b.createdAt - a.createdAt).map(m => (
+          {[...memories].sort((a, b) => b.createdAt - a.createdAt).map(m => (
             <li key={m.id} className="flex items-start justify-between gap-3 rounded-lg bg-gray-800 px-3 py-2">
               <div className="flex flex-col gap-0.5">
                 <span className="text-sm text-white">{m.content}</span>
