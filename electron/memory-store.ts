@@ -81,9 +81,17 @@ export const listAllMemories = async (dbPathOverride?: string): Promise<Memory[]
 };
 
 export const deleteMemory = async (id: string, dbPathOverride?: string): Promise<void> => {
-  const db = await connect(getDbPath(dbPathOverride));
-  const table = await db.openTable(TABLE_NAME);
-  await table.delete(`id = '${id}'`);
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
+    console.warn('deleteMemory: invalid id format, skipping', id);
+    return;
+  }
+  try {
+    const db = await connect(getDbPath(dbPathOverride));
+    const table = await db.openTable(TABLE_NAME);
+    await table.delete(`id = '${id}'`);
+  } catch (err) {
+    console.warn('deleteMemory failed:', err);
+  }
 };
 
 export const searchMemories = async (
@@ -104,7 +112,8 @@ export const searchMemories = async (
       source: r.source as Memory['source'],
       createdAt: r.createdAt as number,
     }));
-  } catch {
+  } catch (err) {
+    console.warn('searchMemories failed:', err);
     return [];
   }
 };
