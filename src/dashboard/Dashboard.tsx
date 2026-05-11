@@ -5,8 +5,9 @@ import { Models } from './tabs/Models';
 import { History } from '../history/History';
 import { HowToUse } from './tabs/HowToUse';
 import type { Settings } from '../shared/types';
+import Memories from './tabs/Memories';
 
-type Tab = 'home' | 'setup' | 'models' | 'history' | 'howto';
+type Tab = 'home' | 'setup' | 'models' | 'history' | 'howto' | 'memories';
 
 const TABS: { id: Tab; label: string }[] = [
   { id: 'home', label: 'Home' },
@@ -14,6 +15,7 @@ const TABS: { id: Tab; label: string }[] = [
   { id: 'models', label: 'Models' },
   { id: 'history', label: 'History' },
   { id: 'howto', label: 'How to Use' },
+  { id: 'memories', label: 'Memories' },
 ];
 
 export const Dashboard: React.FC = () => {
@@ -55,6 +57,7 @@ export const Dashboard: React.FC = () => {
         {active === 'models' && <Models />}
         {active === 'history' && <History embedded />}
         {active === 'howto' && <HowToUse />}
+        {active === 'memories' && <Memories />}
       </div>
     </div>
   );
