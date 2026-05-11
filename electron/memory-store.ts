@@ -94,6 +94,16 @@ export const deleteMemory = async (id: string, dbPathOverride?: string): Promise
   }
 };
 
+export const countMemories = async (dbPathOverride?: string): Promise<number> => {
+  try {
+    const db = await connect(getDbPath(dbPathOverride));
+    const table = await db.openTable(TABLE_NAME);
+    return await table.countRows();
+  } catch {
+    return 0;
+  }
+};
+
 export const searchMemories = async (
   query: string,
   ollamaUrl = 'http://localhost:11434',

@@ -12,7 +12,7 @@ import { createConversation, appendMessage, applyRollingWindow } from './convers
 import { appendHistory, getHistory, deleteHistoryEntry, exportHistoryMarkdown } from './history-store';
 import type { Conversation, Message } from '../src/shared/types';
 import type { Memory } from '../src/shared/types';
-import { initMemoryStore, insertMemory, searchMemories, listAllMemories, deleteMemory } from './memory-store';
+import { initMemoryStore, insertMemory, searchMemories, listAllMemories, deleteMemory, countMemories } from './memory-store';
 import { extractMemories } from './memory-extractor';
 
 let currentConversation: Conversation | null = null;
@@ -190,17 +190,14 @@ const registerIpc = (): void => {
   ipcMain.handle(IPC.HISTORY_EXPORT, () => exportHistoryMarkdown());
 
   ipcMain.handle(IPC.MEMORY_LIST, () => listAllMemories());
-  ipcMain.handle(IPC.MEMORY_COUNT, async () => {
-    const all = await listAllMemories();
-    return all.length;
-  });
+  ipcMain.handle(IPC.MEMORY_COUNT, () => countMemories());
   ipcMain.handle(IPC.MEMORY_DELETE, (_e, id: string) => deleteMemory(id));
-  ipcMain.handle(IPC.MEMORY_ADD, (_e, payload: { content: string; type: Memory['type'] }) =>
-    insertMemory({ content: payload.content, type: payload.type, source: 'manual', createdAt: Date.now() },
-      undefined,
-      getSettings().ollamaUrl,
-    )
-  );
+  ipcMain.handle(IPC.MEMORY_ADD, (_e, payload: { content: string; type: Memory['type'] }) => {
+    if (!payload?.content?.trim()) return null;
+    const { ollamaUrl } = getSettings();
+    if (!ollamaUrl) return null;
+    return insertMemory({ content: payload.content, type: payload.type, source: 'manual', createdAt: Date.now() }, undefined, ollamaUrl);
+  });
 
   ipcMain.handle(IPC.OLLAMA_STATUS, async () => {
     const settings = getSettings();
