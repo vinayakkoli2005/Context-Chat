@@ -18,7 +18,8 @@ export const extractMemories = async (
   const transcript = conversation.messages
     .filter(m => m.role !== 'system')
     .map(m => `${m.role.toUpperCase()}: ${m.content}`)
-    .join('\n');
+    .join('\n')
+    .slice(-8000);
 
   try {
     const res = await fetch(`${ollamaUrl}/api/chat`, {

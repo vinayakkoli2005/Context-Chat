@@ -16,6 +16,7 @@ export default function Memories() {
   useEffect(() => { load(); }, []);
 
   const handleDelete = async (id: string) => {
+    if (!window.confirm('Delete this memory? This cannot be undone.')) return;
     await window.cc.invoke(window.cc.channels.MEMORY_DELETE, id).catch(() => {});
     load();
   };
