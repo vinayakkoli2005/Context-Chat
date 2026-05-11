@@ -11,6 +11,9 @@ import { detectHardware } from './hardware-detector';
 import { createConversation, appendMessage, applyRollingWindow } from './conversation';
 import { appendHistory, getHistory, deleteHistoryEntry, exportHistoryMarkdown } from './history-store';
 import type { Conversation, Message } from '../src/shared/types';
+import type { Memory } from '../src/shared/types';
+import { initMemoryStore, insertMemory, searchMemories, listAllMemories, deleteMemory } from './memory-store';
+import { extractMemories } from './memory-extractor';
 
 let currentConversation: Conversation | null = null;
 let lastSelectionPos = { x: 100, y: 100 };
@@ -81,7 +84,19 @@ const registerIpc = (): void => {
     }
   });
   ipcMain.on(IPC.ICON_CLICK, () => openPanelForSelection());
-  ipcMain.on(IPC.PANEL_CLOSE, () => { hidePanel(); currentConversation = null; currentAbortController?.abort(); currentAbortController = null; });
+  ipcMain.on(IPC.PANEL_CLOSE, () => {
+    hidePanel();
+    currentAbortController?.abort();
+    currentAbortController = null;
+    if (currentConversation) {
+      const conv = currentConversation;
+      const { ollamaUrl, selectedModel } = getSettings();
+      extractMemories(conv, ollamaUrl, selectedModel ?? undefined)
+        .then(facts => Promise.all(facts.map(f => insertMemory(f, undefined, ollamaUrl))))
+        .catch(err => console.warn('Memory extraction failed:', err));
+    }
+    currentConversation = null;
+  });
   ipcMain.on(IPC.VOICE_CLOSE, () => { hideVoiceOverlay(); });
   ipcMain.on(IPC.TOAST_ACCEPT, () => openPanelForScreenshot());
   ipcMain.on(IPC.TOAST_DISMISS, () => { hideToast(); pendingScreenshot = null; });
@@ -113,6 +128,17 @@ const registerIpc = (): void => {
     currentConversation = applyRollingWindow(currentConversation);
     currentConversation = { ...currentConversation, model: payload.model };
     const settings = getSettings();
+    const memories = await searchMemories(
+      payload.userMessage.content as string,
+      settings.ollamaUrl,
+    ).catch(() => [] as Memory[]);
+    const messagesWithMemory = memories.length > 0
+      ? currentConversation.messages.map((m, i) =>
+          i === 0
+            ? { ...m, content: `What you remember about this user:\n${memories.map(mem => `- ${mem.content}`).join('\n')}\n\n${m.content}` }
+            : m
+        )
+      : currentConversation.messages;
     const apiKey = settings.provider === 'openai' ? settings.openaiApiKey : settings.anthropicApiKey;
     let assistantBuffer = '';
     const win = BrowserWindow.fromWebContents(e.sender);
@@ -123,7 +149,7 @@ const registerIpc = (): void => {
         apiKey,
         model: payload.model,
         ollamaUrl: settings.ollamaUrl,
-        messages: currentConversation.messages,
+        messages: messagesWithMemory,
         onToken: (delta) => {
           assistantBuffer += delta;
           win?.webContents.send(IPC.CHAT_TOKEN, { delta });
@@ -162,6 +188,19 @@ const registerIpc = (): void => {
     deleteHistoryEntry(payload.id);
   });
   ipcMain.handle(IPC.HISTORY_EXPORT, () => exportHistoryMarkdown());
+
+  ipcMain.handle(IPC.MEMORY_LIST, () => listAllMemories());
+  ipcMain.handle(IPC.MEMORY_COUNT, async () => {
+    const all = await listAllMemories();
+    return all.length;
+  });
+  ipcMain.handle(IPC.MEMORY_DELETE, (_e, id: string) => deleteMemory(id));
+  ipcMain.handle(IPC.MEMORY_ADD, (_e, payload: { content: string; type: Memory['type'] }) =>
+    insertMemory({ content: payload.content, type: payload.type, source: 'manual', createdAt: Date.now() },
+      undefined,
+      getSettings().ollamaUrl,
+    )
+  );
 
   ipcMain.handle(IPC.OLLAMA_STATUS, async () => {
     const settings = getSettings();
@@ -283,6 +322,7 @@ const registerIpc = (): void => {
 const main = async (): Promise<void> => {
   if (!ensureSingleInstance()) return;
   await app.whenReady();
+  await initMemoryStore().catch(err => console.warn('Memory store init failed:', err));
   app.setAppUserModelId('com.contextchat.desktop');
   registerIpc();
   createTray();
