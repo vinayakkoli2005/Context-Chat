@@ -48,4 +48,10 @@ export const IPC = {
   WHISPER_DOWNLOAD_PROGRESS: 'whisper:download:progress',
   VOICE_CLOSE: 'voice:close',
   VOICE_SEND: 'voice:send',
+
+  // memory ↔ main
+  MEMORY_LIST:   'memory:list',
+  MEMORY_DELETE: 'memory:delete',
+  MEMORY_ADD:    'memory:add',
+  MEMORY_COUNT:  'memory:count',
 } as const;
