@@ -7,7 +7,7 @@ export default defineConfig({
     build: {
       lib: { entry: 'electron/main.ts' },
       rollupOptions: {
-        external: ['electron', 'uiohook-napi', '@nut-tree-fork/nut-js'],
+        external: ['electron', 'uiohook-napi', '@nut-tree-fork/nut-js', '@lancedb/lancedb', 'apache-arrow'],
         output: { format: 'cjs', entryFileNames: '[name].js' }
       }
     }
