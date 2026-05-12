@@ -55,4 +55,10 @@ export const IPC = {
   MEMORY_ADD:    'memory:add',
   MEMORY_COUNT:  'memory:count',
   MEMORY_EXTRACT_FROM_HISTORY: 'memory:extract-from-history',
+
+  // rag ↔ main
+  RAG_INGEST: 'rag:ingest',
+  RAG_LIST:   'rag:list',
+  RAG_DELETE: 'rag:delete',
+  RAG_SEARCH: 'rag:search',
 } as const;
