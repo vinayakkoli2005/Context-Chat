@@ -54,4 +54,5 @@ export const IPC = {
   MEMORY_DELETE: 'memory:delete',
   MEMORY_ADD:    'memory:add',
   MEMORY_COUNT:  'memory:count',
+  MEMORY_EXTRACT_FROM_HISTORY: 'memory:extract-from-history',
 } as const;

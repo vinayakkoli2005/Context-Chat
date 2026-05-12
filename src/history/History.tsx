@@ -5,6 +5,8 @@ export const History: React.FC<{ embedded?: boolean }> = ({ embedded = false }) 
   const [entries, setEntries] = useState<HistoryEntry[]>([]);
   const [selected, setSelected] = useState<HistoryEntry | null>(null);
   const [loading, setLoading] = useState(true);
+  const [extracting, setExtracting] = useState(false);
+  const [extractResult, setExtractResult] = useState<string | null>(null);
 
   const load = async () => {
     const data = await window.cc.invoke(window.cc.channels.HISTORY_GET);
@@ -13,6 +15,15 @@ export const History: React.FC<{ embedded?: boolean }> = ({ embedded = false }) 
   };
 
   useEffect(() => { load(); }, []);
+
+  const handleExtract = async (entry: HistoryEntry) => {
+    setExtracting(true);
+    setExtractResult(null);
+    const count = await window.cc.invoke(window.cc.channels.MEMORY_EXTRACT_FROM_HISTORY, entry).catch(() => 0);
+    setExtracting(false);
+    setExtractResult(count > 0 ? `✓ ${count} memor${count === 1 ? 'y' : 'ies'} saved` : 'Nothing worth remembering found');
+    setTimeout(() => setExtractResult(null), 3000);
+  };
 
   const handleDelete = async (id: string) => {
     await window.cc.invoke(window.cc.channels.HISTORY_DELETE, { id });
@@ -91,12 +102,24 @@ export const History: React.FC<{ embedded?: boolean }> = ({ embedded = false }) 
                   <div className="text-xs text-white/50">{formatDate(selected.startedAt)}</div>
                   <div className="text-xs text-blue-400">{selected.provider} · {selected.model}</div>
                 </div>
-                <button
-                  onClick={() => handleDelete(selected.id)}
-                  className="text-xs text-red-400 hover:text-red-300 px-2 py-1 rounded border border-red-400/30 hover:border-red-300/50"
-                >
-                  Delete
-                </button>
+                <div className="flex items-center gap-2">
+                  {extractResult && (
+                    <span className="text-xs text-green-400">{extractResult}</span>
+                  )}
+                  <button
+                    onClick={() => handleExtract(selected)}
+                    disabled={extracting}
+                    className="text-xs text-purple-400 hover:text-purple-300 px-2 py-1 rounded border border-purple-400/30 hover:border-purple-300/50 disabled:opacity-40"
+                  >
+                    {extracting ? 'Extracting…' : '🧠 Extract to Memory'}
+                  </button>
+                  <button
+                    onClick={() => handleDelete(selected.id)}
+                    className="text-xs text-red-400 hover:text-red-300 px-2 py-1 rounded border border-red-400/30 hover:border-red-300/50"
+                  >
+                    Delete
+                  </button>
+                </div>
               </div>
 
               {selected.context.type === 'text' && (

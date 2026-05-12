@@ -10,7 +10,7 @@ import { getSettings, setSettings } from './store';
 import { detectHardware } from './hardware-detector';
 import { createConversation, appendMessage, applyRollingWindow } from './conversation';
 import { appendHistory, getHistory, deleteHistoryEntry, exportHistoryMarkdown } from './history-store';
-import type { Conversation, Message } from '../src/shared/types';
+import type { Conversation, Message, HistoryEntry } from '../src/shared/types';
 import type { Memory } from '../src/shared/types';
 import { initMemoryStore, insertMemory, searchMemories, listAllMemories, deleteMemory, countMemories } from './memory-store';
 import { extractMemories } from './memory-extractor';
@@ -197,6 +197,13 @@ const registerIpc = (): void => {
     const { ollamaUrl } = getSettings();
     if (!ollamaUrl) return null;
     return insertMemory({ content: payload.content, type: payload.type, source: 'manual', createdAt: Date.now() }, undefined, ollamaUrl);
+  });
+  ipcMain.handle(IPC.MEMORY_EXTRACT_FROM_HISTORY, async (_e, entry: HistoryEntry) => {
+    const { ollamaUrl, selectedModel } = getSettings();
+    const conv: Conversation = { id: entry.id, context: entry.context, model: entry.model, messages: entry.messages };
+    const facts = await extractMemories(conv, ollamaUrl, selectedModel ?? undefined).catch(() => []);
+    await Promise.all(facts.map(f => insertMemory(f, undefined, ollamaUrl))).catch(() => {});
+    return facts.length;
   });
 
   ipcMain.handle(IPC.OLLAMA_STATUS, async () => {
