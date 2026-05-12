@@ -6,14 +6,16 @@ import { History } from '../history/History';
 import { HowToUse } from './tabs/HowToUse';
 import type { Settings } from '../shared/types';
 import Memories from './tabs/Memories';
+import KnowledgeBase from './tabs/KnowledgeBase';
 
-type Tab = 'home' | 'setup' | 'models' | 'history' | 'howto' | 'memories';
+type Tab = 'home' | 'setup' | 'models' | 'history' | 'howto' | 'memories' | 'kb';
 
 const TABS: { id: Tab; label: string }[] = [
   { id: 'home', label: 'Home' },
   { id: 'setup', label: 'Setup' },
   { id: 'models', label: 'Models' },
   { id: 'history', label: 'History' },
+  { id: 'kb', label: 'Knowledge Base' },
   { id: 'howto', label: 'How to Use' },
   { id: 'memories', label: 'Memories' },
 ];
@@ -57,6 +59,7 @@ export const Dashboard: React.FC = () => {
         {active === 'models' && <Models />}
         {active === 'history' && <History embedded />}
         {active === 'howto' && <HowToUse />}
+        {active === 'kb' && <KnowledgeBase />}
         {active === 'memories' && <Memories />}
       </div>
     </div>
