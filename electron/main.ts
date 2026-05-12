@@ -131,15 +131,10 @@ const registerIpc = (): void => {
     currentConversation = applyRollingWindow(currentConversation);
     currentConversation = { ...currentConversation, model: payload.model };
     const settings = getSettings();
-    const memories = await searchMemories(
-      payload.userMessage.content as string,
-      settings.ollamaUrl,
-    ).catch(() => [] as Memory[]);
-
-    const ragChunks = await ragSearch(
-      payload.userMessage.content as string,
-      settings.ollamaUrl,
-    ).catch(() => [] as RagResult[]);
+    const [memories, ragChunks] = await Promise.all([
+      searchMemories(payload.userMessage.content as string, settings.ollamaUrl).catch(() => [] as Memory[]),
+      ragSearch(payload.userMessage.content as string, settings.ollamaUrl).catch(() => [] as RagResult[]),
+    ]);
 
     const memoryBlock = memories.length > 0
       ? `What you remember about this user:\n${memories.map(mem => `- ${mem.content}`).join('\n')}\n\n`
