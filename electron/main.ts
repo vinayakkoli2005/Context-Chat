@@ -14,6 +14,9 @@ import type { Conversation, Message, HistoryEntry } from '../src/shared/types';
 import type { Memory } from '../src/shared/types';
 import { initMemoryStore, insertMemory, searchMemories, listAllMemories, deleteMemory, countMemories } from './memory-store';
 import { extractMemories } from './memory-extractor';
+import { initRagStore, ragSearch } from './rag-store';
+import type { RagResult } from './rag-store';
+import { registerRagIpc } from './rag-ipc';
 
 let currentConversation: Conversation | null = null;
 let lastSelectionPos = { x: 100, y: 100 };
@@ -132,10 +135,23 @@ const registerIpc = (): void => {
       payload.userMessage.content as string,
       settings.ollamaUrl,
     ).catch(() => [] as Memory[]);
-    const messagesWithMemory = memories.length > 0
+
+    const ragChunks = await ragSearch(
+      payload.userMessage.content as string,
+      settings.ollamaUrl,
+    ).catch(() => [] as RagResult[]);
+
+    const memoryBlock = memories.length > 0
+      ? `What you remember about this user:\n${memories.map(mem => `- ${mem.content}`).join('\n')}\n\n`
+      : '';
+    const ragBlock = ragChunks.length > 0
+      ? `Relevant context from user's knowledge base:\n${ragChunks.map(c => c.content).join('\n\n')}\n\n`
+      : '';
+
+    const messagesWithMemory = (memoryBlock || ragBlock)
       ? currentConversation.messages.map((m, i) =>
           i === 0
-            ? { ...m, content: `What you remember about this user:\n${memories.map(mem => `- ${mem.content}`).join('\n')}\n\n${m.content}` }
+            ? { ...m, content: `${memoryBlock}${ragBlock}${m.content}` }
             : m
         )
       : currentConversation.messages;
@@ -156,6 +172,10 @@ const registerIpc = (): void => {
         },
         signal: currentAbortController.signal,
       });
+      if (ragChunks.length > 0) {
+        const uniqueSources = [...new Set(ragChunks.map(c => c.source))];
+        assistantBuffer += `\n\n---\n📄 Sources: ${uniqueSources.join(', ')}`;
+      }
       currentConversation = appendMessage(currentConversation, { role: 'assistant', content: assistantBuffer });
       win?.webContents.send(IPC.CHAT_DONE, {});
       // Save completed conversation to history
@@ -295,6 +315,7 @@ const registerIpc = (): void => {
     showPanel(Math.round(display.width / 2) - 180, Math.round(display.height / 2) - 240);
   });
 
+  registerRagIpc();
   registerAudioIpc(() => BrowserWindow.getAllWindows()[0] ?? null);
 
   ipcMain.on(IPC.SCREENSHOT_BTN_CLICK, async () => {
@@ -327,6 +348,7 @@ const main = async (): Promise<void> => {
   if (!ensureSingleInstance()) return;
   await app.whenReady();
   await initMemoryStore().catch(err => console.warn('Memory store init failed:', err));
+  await initRagStore().catch(err => console.warn('RAG store init failed:', err));
   app.setAppUserModelId('com.contextchat.desktop');
   registerIpc();
   createTray();
