@@ -2,6 +2,7 @@ import { connect } from '@lancedb/lancedb';
 import { join } from 'node:path';
 import { v4 as uuid } from 'uuid';
 import type { Memory } from '../src/shared/types';
+import { embedText as _embedText } from './embed';
 
 const TABLE_NAME = 'memories';
 const EMBED_DIM = 768;
@@ -12,18 +13,6 @@ const getDbPath = (override?: string): string => {
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   const { app } = require('electron') as typeof import('electron');
   return join(app.getPath('userData'), 'contextchat-memories');
-};
-
-export const _embedText = async (text: string, ollamaUrl: string): Promise<number[]> => {
-  const res = await fetch(`${ollamaUrl}/api/embeddings`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ model: 'nomic-embed-text', prompt: text }),
-    signal: AbortSignal.timeout(10000),
-  });
-  if (!res.ok) throw new Error(`Embed failed: HTTP ${res.status}`);
-  const json = await res.json() as { embedding: number[] };
-  return json.embedding;
 };
 
 export const initMemoryStore = async (dbPathOverride?: string): Promise<void> => {
