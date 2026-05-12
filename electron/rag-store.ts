@@ -6,6 +6,8 @@ import { embedText } from './embed';
 
 const TABLE_NAME = 'rag_chunks';
 const EMBED_DIM = 768;
+const CHUNK_WORD_THRESHOLD = 400;
+const MIN_CHUNK_WORDS = 10;
 
 interface RagChunk {
   id: string;
@@ -57,13 +59,13 @@ function chunkText(text: string): string[] {
 
   for (const para of paragraphs) {
     const words = para.trim().split(/\s+/);
-    if (words.length > 400) {
+    if (words.length > CHUNK_WORD_THRESHOLD) {
       // Split at sentence boundaries
       const sentences = para.split(/(?<=\. |\.\n)/);
       let current: string[] = [];
       for (const sentence of sentences) {
         const sentWords = sentence.trim().split(/\s+/);
-        if (current.length + sentWords.length > 400) {
+        if (current.length + sentWords.length > CHUNK_WORD_THRESHOLD) {
           if (current.length > 0) {
             rawChunks.push(current.join(' '));
             current = sentWords;
@@ -80,8 +82,8 @@ function chunkText(text: string): string[] {
     }
   }
 
-  // Discard chunks with fewer than 10 words
-  const filtered = rawChunks.filter(c => c.split(/\s+/).filter(Boolean).length >= 10);
+  // Discard chunks with fewer than MIN_CHUNK_WORDS words
+  const filtered = rawChunks.filter(c => c.split(/\s+/).filter(Boolean).length >= MIN_CHUNK_WORDS);
 
   if (filtered.length === 0) return [];
 
@@ -109,8 +111,13 @@ export async function ingestFile(
   if (ext === '.txt' || ext === '.md') {
     text = await fs.readFile(filePath, 'utf-8');
   } else if (ext === '.pdf') {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const pdfParse = require('pdf-parse') as (buf: Buffer) => Promise<{ text: string }>;
+    let pdfParse: (buf: Buffer) => Promise<{ text: string }>;
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      pdfParse = require('pdf-parse');
+    } catch {
+      throw new Error('pdf-parse module not found — run npm install pdf-parse');
+    }
     const buf = await fs.readFile(filePath);
     const data = await pdfParse(buf);
     text = data.text;
@@ -126,7 +133,8 @@ export async function ingestFile(
   const table = await db.openTable(TABLE_NAME);
 
   // Delete existing chunks for this source (re-index on re-add)
-  await table.delete(`source = '${source}'`);
+  const safeSrc = source.replace(/'/g, "\\'");
+  await table.delete(`source = '${safeSrc}'`);
 
   const chunkStrings = chunkText(text);
   if (chunkStrings.length === 0) return { chunks: 0 };
@@ -173,7 +181,8 @@ export async function deleteRagFile(source: string): Promise<void> {
     const tables = await db.tableNames();
     if (!tables.includes(TABLE_NAME)) return;
     const table = await db.openTable(TABLE_NAME);
-    await table.delete(`source = '${source}'`);
+    const safeSrc = source.replace(/'/g, "\\'");
+    await table.delete(`source = '${safeSrc}'`);
   } catch (err) {
     console.warn('deleteRagFile failed:', err);
   }
