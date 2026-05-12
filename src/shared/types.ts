@@ -52,3 +52,8 @@ export interface Memory {
   source: 'auto' | 'manual';
   createdAt: number;
 }
+
+export interface RagFile {
+  source: string;
+  chunks: number;
+}
