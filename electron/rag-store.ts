@@ -20,6 +20,13 @@ export interface RagFile {
   chunks: number;
 }
 
+export interface RagResult {
+  id: string;
+  content: string;
+  source: string;
+  chunkIndex: number;
+}
+
 const getDbPath = (): string => {
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   const { app } = require('electron') as typeof import('electron');
@@ -176,7 +183,7 @@ export async function ragSearch(
   query: string,
   ollamaUrl: string,
   topK = 3,
-): Promise<RagChunk[]> {
+): Promise<RagResult[]> {
   try {
     const vector = await embedText(query, ollamaUrl);
     const db = await connect(getDbPath());
@@ -190,7 +197,7 @@ export async function ragSearch(
       source: r.source as string,
       chunkIndex: r.chunkIndex as number,
       // strip the vector field — callers don't need it
-    })) as RagChunk[];
+    })) as RagResult[];
   } catch (err) {
     console.warn('ragSearch failed:', err);
     return [];
