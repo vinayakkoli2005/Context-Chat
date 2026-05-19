@@ -1,3 +1,6 @@
+# Claude / AI assistant internals
+.claude/
+
 node_modules/
 out/
 dist/
