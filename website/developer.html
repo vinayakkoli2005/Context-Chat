@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Developer — ContextChat</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    /* ── Nav ── */
+    .site-nav {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1rem 2rem;
+      background: rgba(10, 10, 15, 0.85);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+    .nav-logo { font-weight: 700; font-size: 1.1rem; color: var(--text); text-decoration: none; letter-spacing: -0.02em; }
+    .nav-logo span { color: var(--accent); }
+    .nav-links { display: flex; gap: 2rem; list-style: none; margin: 0; padding: 0; }
+    .nav-links a { color: var(--text-muted); text-decoration: none; font-size: 0.9rem; font-weight: 500; transition: color 0.2s; }
+    .nav-links a:hover, .nav-links a.active { color: var(--text); }
+
+    /* ── Page wrapper ── */
+    .dev-page { padding-top: 6rem; min-height: 100vh; }
+
+    /* ── Hero card ── */
+    .dev-hero {
+      max-width: 860px;
+      margin: 0 auto 4rem;
+      padding: 3rem 2rem;
+      text-align: center;
+    }
+    .avatar-ring {
+      width: 120px; height: 120px;
+      border-radius: 50%;
+      margin: 0 auto 1.5rem;
+      background: linear-gradient(135deg, var(--accent), #7c3aed);
+      padding: 3px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .avatar-inner {
+      width: 100%; height: 100%;
+      border-radius: 50%;
+      background: var(--surface);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 2.8rem;
+    }
+    .dev-hero h1 { font-size: clamp(2rem, 5vw, 3rem); font-weight: 800; letter-spacing: -0.03em; margin-bottom: 0.5rem; }
+    .dev-hero .role { color: var(--accent); font-weight: 600; font-size: 1.1rem; margin-bottom: 0.75rem; }
+    .dev-hero .tagline { color: var(--text-muted); max-width: 520px; margin: 0 auto 2rem; line-height: 1.7; }
+    .contact-links { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; }
+    .contact-links a {
+      display: inline-flex; align-items: center; gap: 0.5rem;
+      padding: 0.55rem 1.2rem;
+      border-radius: 8px;
+      font-size: 0.88rem; font-weight: 600;
+      text-decoration: none;
+      transition: all 0.2s;
+    }
+    .btn-portfolio { background: var(--accent); color: #000; }
+    .btn-portfolio:hover { background: #b3f; filter: brightness(1.1); }
+    .btn-linkedin { background: rgba(255,255,255,0.07); color: var(--text); border: 1px solid rgba(255,255,255,0.12); }
+    .btn-linkedin:hover { background: rgba(255,255,255,0.12); }
+    .btn-email { background: rgba(255,255,255,0.07); color: var(--text); border: 1px solid rgba(255,255,255,0.12); }
+    .btn-email:hover { background: rgba(255,255,255,0.12); }
+    .btn-github { background: rgba(255,255,255,0.07); color: var(--text); border: 1px solid rgba(255,255,255,0.12); }
+    .btn-github:hover { background: rgba(255,255,255,0.12); }
+
+    /* ── Section divider ── */
+    .dev-section { max-width: 860px; margin: 0 auto 3.5rem; padding: 0 2rem; }
+    .dev-section h2 { font-size: 1.3rem; font-weight: 700; margin-bottom: 1.5rem; color: var(--text); display: flex; align-items: center; gap: 0.6rem; }
+    .dev-section h2::after { content: ''; flex: 1; height: 1px; background: rgba(255,255,255,0.08); }
+
+    /* ── About ── */
+    .about-card {
+      background: var(--surface);
+      border: 1px solid rgba(255,255,255,0.07);
+      border-radius: 14px;
+      padding: 1.75rem 2rem;
+      line-height: 1.8;
+      color: var(--text-muted);
+    }
+    .about-card p + p { margin-top: 1rem; }
+    .about-card strong { color: var(--text); }
+
+    /* ── Skills ── */
+    .skills-grid { display: flex; flex-wrap: wrap; gap: 0.6rem; }
+    .skill-tag {
+      padding: 0.4rem 0.9rem;
+      border-radius: 6px;
+      font-size: 0.82rem; font-weight: 600;
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .skill-core { background: rgba(100, 220, 150, 0.12); color: #64dc96; border: 1px solid rgba(100, 220, 150, 0.25); }
+    .skill-web  { background: rgba(99, 179, 237, 0.12); color: #63b3ed; border: 1px solid rgba(99, 179, 237, 0.25); }
+    .skill-tool { background: rgba(246, 173, 85, 0.12); color: #f6ad55; border: 1px solid rgba(246, 173, 85, 0.25); }
+    .skill-ai   { background: rgba(198, 128, 227, 0.12); color: #c680e3; border: 1px solid rgba(198, 128, 227, 0.25); }
+
+    /* ── Projects ── */
+    .project-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.25rem; }
+    .project-card {
+      background: var(--surface);
+      border: 1px solid rgba(255,255,255,0.07);
+      border-radius: 14px;
+      padding: 1.5rem;
+      transition: border-color 0.25s, transform 0.25s;
+    }
+    .project-card:hover { border-color: rgba(100,220,150,0.3); transform: translateY(-3px); }
+    .project-card h3 { font-size: 1.05rem; font-weight: 700; margin-bottom: 0.5rem; }
+    .project-card p { color: var(--text-muted); font-size: 0.9rem; line-height: 1.65; margin-bottom: 1rem; }
+    .project-tags { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+    .project-tags span {
+      padding: 0.25rem 0.6rem;
+      border-radius: 5px;
+      font-size: 0.75rem; font-weight: 600;
+      font-family: 'JetBrains Mono', monospace;
+      background: rgba(255,255,255,0.06);
+      color: var(--text-muted);
+    }
+
+    /* ── Experience timeline ── */
+    .timeline { border-left: 2px solid rgba(255,255,255,0.08); padding-left: 1.75rem; }
+    .timeline-item { position: relative; margin-bottom: 2rem; }
+    .timeline-item::before {
+      content: '';
+      position: absolute;
+      left: -2.05rem; top: 0.35rem;
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 10px var(--accent);
+    }
+    .timeline-item h3 { font-size: 1rem; font-weight: 700; margin-bottom: 0.2rem; }
+    .timeline-item .meta { font-size: 0.82rem; color: var(--accent); font-weight: 600; margin-bottom: 0.5rem; font-family: 'JetBrains Mono', monospace; }
+    .timeline-item p { color: var(--text-muted); font-size: 0.9rem; line-height: 1.65; }
+
+    /* ── ContextChat section ── */
+    .project-spotlight {
+      background: linear-gradient(135deg, rgba(100,220,150,0.06) 0%, rgba(124,58,237,0.06) 100%);
+      border: 1px solid rgba(100,220,150,0.2);
+      border-radius: 16px;
+      padding: 2rem;
+    }
+    .project-spotlight h3 { font-size: 1.3rem; font-weight: 800; margin-bottom: 0.5rem; }
+    .project-spotlight .subtitle { color: var(--accent); font-size: 0.88rem; font-weight: 600; margin-bottom: 1rem; font-family: 'JetBrains Mono', monospace; }
+    .project-spotlight p { color: var(--text-muted); line-height: 1.75; margin-bottom: 1.25rem; }
+    .spotlight-tags { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+    .spotlight-tags span {
+      padding: 0.3rem 0.75rem;
+      border-radius: 6px;
+      font-size: 0.8rem; font-weight: 600;
+      font-family: 'JetBrains Mono', monospace;
+      background: rgba(100,220,150,0.1);
+      color: #64dc96;
+      border: 1px solid rgba(100,220,150,0.2);
+    }
+
+    /* ── Footer ── */
+    footer { text-align: center; padding: 3rem 1rem; color: var(--text-muted); font-size: 0.85rem; border-top: 1px solid rgba(255,255,255,0.05); margin-top: 2rem; }
+
+    /* ── Responsive ── */
+    @media (max-width: 600px) {
+      .site-nav { padding: 1rem; }
+      .nav-links { gap: 1rem; }
+      .contact-links a { padding: 0.5rem 0.9rem; font-size: 0.82rem; }
+    }
+
+    /* Fade-in */
+    .fade-in { opacity: 0; transform: translateY(24px); transition: opacity 0.6s ease, transform 0.6s ease; }
+    .fade-in.visible { opacity: 1; transform: translateY(0); }
+  </style>
+</head>
+<body>
+
+  <!-- NAV -->
+  <nav class="site-nav">
+    <a href="index.html" class="nav-logo">Context<span>Chat</span></a>
+    <ul class="nav-links">
+      <li><a href="index.html">Home</a></li>
+      <li><a href="guide.html">Setup Guide</a></li>
+      <li><a href="developer.html" class="active">Developer</a></li>
+    </ul>
+  </nav>
+
+  <div class="dev-page">
+
+    <!-- HERO -->
+    <div class="dev-hero fade-in">
+      <div class="avatar-ring">
+        <div class="avatar-inner">👨‍💻</div>
+      </div>
+      <h1>Vinayak Koli</h1>
+      <p class="role">Backend Developer · CS & Social Sciences @ IIIT Delhi</p>
+      <p class="tagline">Building tools that put AI back in your hands. 3+ years of backend experience — now channeling it into local-first software.</p>
+      <div class="contact-links">
+        <a href="https://vinaytasensei.vercel.app/" target="_blank" class="btn-portfolio">🌐 Portfolio</a>
+        <a href="https://www.linkedin.com/in/vinayak-koli-940b0728b/" target="_blank" class="btn-linkedin">in LinkedIn</a>
+        <a href="mailto:vinayak23597@iiitd.ac.in" class="btn-email">✉ Email</a>
+        <a href="https://github.com/vinayakkoli2005" target="_blank" class="btn-github">⌥ GitHub</a>
+      </div>
+    </div>
+
+    <!-- CONTEXTCHAT SPOTLIGHT -->
+    <div class="dev-section fade-in">
+      <h2>Flagship Project</h2>
+      <div class="project-spotlight">
+        <h3>ContextChat</h3>
+        <div class="subtitle">// the app you're looking at right now</div>
+        <p>
+          ContextChat started from a simple frustration: every "AI assistant" sends your data to a cloud you don't control.
+          I wanted something that runs entirely on my own hardware — memory, search, voice, and all — with zero subscriptions and zero data leakage.
+        </p>
+        <p>
+          Built with Electron + React + TypeScript, it embeds a local vector database (LanceDB), runs Whisper for on-device speech-to-text,
+          supports Ollama models out of the box, and lets you plug in OpenAI or Anthropic keys if you prefer hosted inference.
+          The Knowledge Base feature lets you drop in PDFs and notes and query them in plain English — locally, always.
+        </p>
+        <div class="spotlight-tags">
+          <span>Electron</span>
+          <span>React</span>
+          <span>TypeScript</span>
+          <span>LanceDB</span>
+          <span>Ollama</span>
+          <span>Whisper</span>
+          <span>RAG</span>
+          <span>Vector Search</span>
+          <span>Local-first</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ABOUT -->
+    <div class="dev-section fade-in">
+      <h2>About</h2>
+      <div class="about-card">
+        <p>
+          I'm a <strong>Computer Science & Social Sciences</strong> student at <strong>IIIT Delhi</strong> (batch of 2023–2027),
+          with a focus on backend systems and applied AI. I've been writing code for 3+ years, mostly on the server side —
+          APIs, databases, pipelines — but I've been spending more time lately on full-stack and desktop work.
+        </p>
+        <p>
+          I interned at <strong>1stop.ai</strong> as a backend developer, working with Laravel on production systems.
+          Outside of coursework and internships, I build things for fun: local-first AI tools, productivity apps,
+          and the occasional game.
+        </p>
+        <p>
+          I believe software should work <em>for</em> the user — not harvest their data, not require an internet connection,
+          not lock them into a subscription. ContextChat is my attempt to put that belief into practice.
+        </p>
+      </div>
+    </div>
+
+    <!-- SKILLS -->
+    <div class="dev-section fade-in">
+      <h2>Skills</h2>
+      <div class="skills-grid">
+        <span class="skill-tag skill-core">Java</span>
+        <span class="skill-tag skill-core">Python</span>
+        <span class="skill-tag skill-core">TypeScript</span>
+        <span class="skill-tag skill-core">PHP</span>
+        <span class="skill-tag skill-web">Laravel</span>
+        <span class="skill-tag skill-web">FastAPI</span>
+        <span class="skill-tag skill-web">React</span>
+        <span class="skill-tag skill-web">React Native</span>
+        <span class="skill-tag skill-web">Electron</span>
+        <span class="skill-tag skill-tool">LanceDB</span>
+        <span class="skill-tag skill-tool">SQLite</span>
+        <span class="skill-tag skill-tool">PostgreSQL</span>
+        <span class="skill-tag skill-tool">Git</span>
+        <span class="skill-tag skill-ai">Ollama</span>
+        <span class="skill-tag skill-ai">RAG</span>
+        <span class="skill-tag skill-ai">Whisper</span>
+        <span class="skill-tag skill-ai">LLM Integration</span>
+        <span class="skill-tag skill-ai">Vector Embeddings</span>
+      </div>
+    </div>
+
+    <!-- EXPERIENCE -->
+    <div class="dev-section fade-in">
+      <h2>Experience</h2>
+      <div class="timeline">
+        <div class="timeline-item">
+          <h3>Backend Developer Intern · 1stop.ai</h3>
+          <div class="meta">2024 · Laravel · PHP · REST APIs</div>
+          <p>Worked on production backend systems at an AI startup. Built and maintained REST API endpoints using Laravel, handled database design and optimization, and collaborated on features shipped to real users.</p>
+        </div>
+        <div class="timeline-item">
+          <h3>CS + Social Sciences · IIIT Delhi</h3>
+          <div class="meta">2023 → 2027 · B.Tech (expected)</div>
+          <p>Dual-discipline degree combining rigorous computer science fundamentals with social science theory. Exploring how technology shapes — and is shaped by — human systems.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- PROJECTS -->
+    <div class="dev-section fade-in">
+      <h2>Other Projects</h2>
+      <div class="project-grid">
+        <div class="project-card">
+          <h3>Vocal for Local (VoLo)</h3>
+          <p>A platform connecting local artisans and small vendors with customers in their area — built to support hyperlocal commerce and reduce dependence on large aggregators.</p>
+          <div class="project-tags">
+            <span>React Native</span>
+            <span>FastAPI</span>
+            <span>PostgreSQL</span>
+            <span>Maps API</span>
+          </div>
+        </div>
+        <div class="project-card">
+          <h3>Angry Birds Clone</h3>
+          <p>Full physics simulation of Angry Birds built in Java with LibGDX. Custom rigid-body physics, Box2D collision detection, multiple level layouts, and full game state management.</p>
+          <div class="project-tags">
+            <span>Java</span>
+            <span>LibGDX</span>
+            <span>Box2D</span>
+            <span>Game Physics</span>
+          </div>
+        </div>
+        <div class="project-card">
+          <h3>ContextChat Desktop</h3>
+          <p>This app — local-first AI assistant with persistent memory, RAG knowledge base, voice input, and full Ollama/OpenAI/Anthropic support. Zero cloud dependency.</p>
+          <div class="project-tags">
+            <span>Electron</span>
+            <span>TypeScript</span>
+            <span>LanceDB</span>
+            <span>Ollama</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PHILOSOPHY -->
+    <div class="dev-section fade-in">
+      <h2>Philosophy</h2>
+      <div class="about-card">
+        <p>
+          <strong>Local-first.</strong> If the data is yours, it should stay on your machine. Not because the cloud is evil,
+          but because you shouldn't need to trust a third party to use your own AI.
+        </p>
+        <p>
+          <strong>Build to ship.</strong> A working v0.1 beats a perfect v0-never. ContextChat started as a weekend project —
+          the best features came from actually using it, not from planning them upfront.
+        </p>
+        <p>
+          <strong>Open by default.</strong> No vendor lock-in. Use Ollama, or OpenAI, or Anthropic. Swap models.
+          If I build something useful, it should be forkable.
+        </p>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- FOOTER -->
+  <footer>
+    <p>Made by Vinayak Koli · <a href="mailto:vinayak23597@iiitd.ac.in" style="color:var(--accent);text-decoration:none;">vinayak23597@iiitd.ac.in</a> · IIIT Delhi · 2026</p>
+  </footer>
+
+  <script>
+    const observer = new IntersectionObserver(
+      entries => entries.forEach(e => {
+        if (e.isIntersecting) { e.target.classList.add('visible'); observer.unobserve(e.target); }
+      }),
+      { threshold: 0.08 }
+    );
+    document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
+  </script>
+</body>
+</html>

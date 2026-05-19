@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ContextChat — AI That Lives on Your Machine</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    /* Scroll fade-in animation */
+    .fade-in { opacity: 0; transform: translateY(24px); transition: opacity 0.6s var(--ease), transform 0.6s var(--ease); }
+    .fade-in.visible { opacity: 1; transform: translateY(0); }
+
+    /* Nav */
+    .site-nav {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1rem 2rem;
+      background: rgba(10, 10, 15, 0.85);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+    .nav-logo { font-weight: 700; font-size: 1.1rem; color: var(--text); text-decoration: none; letter-spacing: -0.02em; }
+    .nav-logo span { color: var(--accent); }
+    .nav-links { display: flex; gap: 2rem; list-style: none; margin: 0; padding: 0; }
+    .nav-links a { color: var(--text-muted); text-decoration: none; font-size: 0.9rem; font-weight: 500; transition: color 0.2s; }
+    .nav-links a:hover, .nav-links a.active { color: var(--text); }
+
+    #hero { padding-top: 5rem; }
+
+    @media (max-width: 600px) {
+      .site-nav { padding: 1rem; }
+      .nav-links { gap: 1rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- NAV -->
+  <nav class="site-nav">
+    <a href="index.html" class="nav-logo">Context<span>Chat</span></a>
+    <ul class="nav-links">
+      <li><a href="index.html" class="active">Home</a></li>
+      <li><a href="guide.html">Setup Guide</a></li>
+      <li><a href="developer.html">Developer</a></li>
+    </ul>
+  </nav>
+
+  <!-- HERO -->
+  <section id="hero">
+    <div class="badge">Now in Production</div>
+    <h1>ContextChat</h1>
+    <p class="tagline">No cloud. No subscriptions. No API bills.<br/>Your AI runs where your data lives — on your own machine.</p>
+    <a href="#download" class="cta-primary">Download Free</a>
+    <a href="#features" class="cta-secondary">See How It Works</a>
+  </section>
+
+  <!-- FEATURES -->
+  <section id="features">
+    <h2>Everything AI. Nothing Sent Away.</h2>
+    <div class="feature-grid">
+
+      <div class="feature-card">
+        <div class="icon">🧠</div>
+        <h3>Persistent Memory</h3>
+        <p>Remembers your preferences, projects, and goals across every conversation. Gets smarter the more you use it.</p>
+      </div>
+
+      <div class="feature-card">
+        <div class="icon">📚</div>
+        <h3>Knowledge Base</h3>
+        <p>Drop in your PDFs, notes, and docs. Ask questions about them in plain English. Your files never leave your machine.</p>
+      </div>
+
+      <div class="feature-card">
+        <div class="icon">🌐</div>
+        <h3>Web Search</h3>
+        <p>Optionally connect a search API for real-time answers. You control when it's on — and when it's off.</p>
+      </div>
+
+      <div class="feature-card">
+        <div class="icon">⚡</div>
+        <h3>Instant Context</h3>
+        <p>Select any text on your screen. One hotkey. Instant AI response. No copy-paste, no tab switching.</p>
+      </div>
+
+      <div class="feature-card">
+        <div class="icon">🎙️</div>
+        <h3>Voice Input</h3>
+        <p>Talk to it. Whisper transcribes locally — your voice never hits a server.</p>
+      </div>
+
+      <div class="feature-card">
+        <div class="icon">🔒</div>
+        <h3>100% Local</h3>
+        <p>Runs on Ollama with your own models. Or plug in OpenAI / Anthropic keys if you prefer. You decide.</p>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- HOW IT WORKS -->
+  <section id="how">
+    <h2>How It Works</h2>
+    <div class="steps">
+      <div class="step">
+        <span class="step-num">01</span>
+        <h3>Install &amp; Run</h3>
+        <p>Download the installer. Runs silently in your system tray. No setup wizard, no account required.</p>
+      </div>
+      <div class="step">
+        <span class="step-num">02</span>
+        <h3>Select Anything</h3>
+        <p>Highlight text anywhere on your screen — a bug, an email, a document. A floating icon appears.</p>
+      </div>
+      <div class="step">
+        <span class="step-num">03</span>
+        <h3>Get an Answer</h3>
+        <p>Click it. The AI responds instantly — with memory of who you are and context from your files.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- TECH STACK -->
+  <section id="tech">
+    <h2>Built on Open Technology</h2>
+    <p class="tech-sub">No vendor lock-in. Swap models, change providers, run fully offline.</p>
+    <div class="tech-pills">
+      <span>Electron</span>
+      <span>React</span>
+      <span>TypeScript</span>
+      <span>Ollama</span>
+      <span>LanceDB</span>
+      <span>Whisper</span>
+      <span>nomic-embed-text</span>
+      <span>OpenAI compatible</span>
+      <span>Anthropic compatible</span>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section id="download">
+    <h2>Own Your AI.</h2>
+    <p>No monthly fee. No data harvesting. No internet required.<br/>Just intelligence — running on your hardware.</p>
+    <a href="#" class="cta-primary">Download for Windows</a>
+    <p class="version-note">Built by Vinayak Koli · Open source · Windows 10/11</p>
+  </section>
+
+  <!-- FOOTER -->
+  <footer>
+    <p>ContextChat © 2026 · Built with zero cloud dependency</p>
+  </footer>
+
+  <script src="main.js"></script>
+</body>
+</html>
