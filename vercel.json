@@ -1,6 +1,5 @@
 {
-  "rootDirectory": "website",
   "buildCommand": null,
-  "outputDirectory": ".",
+  "outputDirectory": "website",
   "framework": null
 }
