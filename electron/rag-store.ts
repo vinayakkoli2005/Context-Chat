@@ -3,6 +3,13 @@ import { join } from 'node:path';
 import fs from 'fs/promises';
 import path from 'path';
 import { embedText } from './embed';
+import {
+  isTurbovecEnabled,
+  ensureTurbovecReady,
+  turbovecAdd,
+  turbovecSearch,
+  turbovecDelete
+} from './turbovec-store';
 
 const TABLE_NAME = 'rag_chunks';
 const EMBED_DIM = 768;
@@ -151,6 +158,26 @@ export async function ingestFile(
     });
   }
 
+  // TurboVec Pro Mode: write to the compressed index if enabled + available.
+  // This keeps the vector footprint ~16× smaller than LanceDB's fp32, which
+  // is what lets 100K+ chunks fit under 1GB RAM.
+  if (isTurbovecEnabled()) {
+    const ready = await ensureTurbovecReady();
+    if (ready.ok) {
+      try {
+        // Delete any existing chunks for this source first (re-index on re-add)
+        await turbovecDelete(source);
+        await turbovecAdd(chunks);
+        return { chunks: chunks.length };
+      } catch (err) {
+        // Fall through to LanceDB on sidecar failure so user never loses data
+        console.warn('[rag-store] TurboVec ingest failed, falling back to LanceDB:', err);
+      }
+    } else {
+      console.warn(`[rag-store] TurboVec enabled but unavailable (${ready.reason}); using LanceDB`);
+    }
+  }
+
   await table.add(chunks as unknown as Record<string, unknown>[]);
   return { chunks: chunks.length };
 }
@@ -176,6 +203,15 @@ export async function listRagFiles(): Promise<RagFile[]> {
 }
 
 export async function deleteRagFile(source: string): Promise<void> {
+  // TurboVec Pro Mode: delete from compressed index when enabled.
+  if (isTurbovecEnabled()) {
+    const ready = await ensureTurbovecReady();
+    if (ready.ok) {
+      try { await turbovecDelete(source); } catch (err) {
+        console.warn('[rag-store] TurboVec delete failed:', err);
+      }
+    }
+  }
   try {
     const db = await connect(getDbPath());
     const tables = await db.tableNames();
@@ -195,6 +231,29 @@ export async function ragSearch(
 ): Promise<RagResult[]> {
   try {
     const vector = await embedText(query, ollamaUrl);
+
+    // TurboVec Pro Mode path
+    if (isTurbovecEnabled()) {
+      const ready = await ensureTurbovecReady();
+      if (ready.ok) {
+        try {
+          const hits = await turbovecSearch(vector, topK);
+          if (hits.length > 0) {
+            return hits.map(h => ({
+              id: h.id,
+              content: h.content,
+              source: h.source,
+              chunkIndex: h.chunkIndex,
+            }));
+          }
+          // empty result is fine — fall through to LanceDB only if user
+          // also has legacy data there
+        } catch (err) {
+          console.warn('[rag-store] TurboVec search failed, trying LanceDB:', err);
+        }
+      }
+    }
+
     const db = await connect(getDbPath());
     const tables = await db.tableNames();
     if (!tables.includes(TABLE_NAME)) return [];

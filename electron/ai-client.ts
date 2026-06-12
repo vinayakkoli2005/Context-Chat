@@ -1,4 +1,11 @@
 import type { Message } from '../src/shared/types';
+import {
+  shouldFallbackToAirLlm,
+  getAirLlmStatus,
+  runAirLlmInference,
+  cancelAirLlmInference
+} from './airllm-bridge';
+import { detectHardware } from './hardware-detector';
 
 export interface StreamChatArgs {
   provider: 'ollama' | 'openai' | 'anthropic';
@@ -48,10 +55,58 @@ export const listModels = async (
 };
 
 export const streamChat = async (args: StreamChatArgs): Promise<void> => {
-  if (args.provider === 'ollama') return streamOllama(args);
+  if (args.provider === 'ollama') {
+    // AirLLM crash-prevention fallback:
+    // If the chosen model is too large for the user's VRAM, attempting to
+    // run it via Ollama will OOM and crash the process. Detect this case
+    // before issuing the request and route through AirLLM's layer-by-layer
+    // sidecar inference instead.
+    const hw = detectHardware();
+    const vramGB = hw.estimatedVramGb ?? 0;
+    if (shouldFallbackToAirLlm(args.model, vramGB)) {
+      const status = getAirLlmStatus();
+      if (status.available && status.airllmInstalled) {
+        return streamAirLlm(args);
+      }
+      // AirLLM toggle is on but Python or airllm isn't installed —
+      // surface the reason in logs rather than silently OOM'ing on Ollama.
+      console.warn(
+        `[ai-client] AirLLM fallback requested but unavailable: ${
+          (status as { reason: string }).reason ?? 'not_installed'
+        }. Proceeding with Ollama — model may exceed available VRAM.`
+      );
+    }
+    return streamOllama(args);
+  }
   if (args.provider === 'openai') return streamOpenAI(args);
   if (args.provider === 'anthropic') return streamAnthropic(args);
   throw new Error(`Unknown provider: ${args.provider}`);
+};
+
+const streamAirLlm = async (args: StreamChatArgs): Promise<void> => {
+  // Flatten the chat history into a single prompt string. AirLLM's
+  // layer-by-layer runner takes a plain prompt rather than a chat-formatted
+  // message list. This is a reasonable trade-off given that AirLLM is the
+  // fallback for extreme memory constraints, not the steady-state path.
+  const prompt = args.messages
+    .map(m => `${m.role.toUpperCase()}: ${m.content}`)
+    .join('\n\n') + '\n\nASSISTANT:';
+
+  // Wire the AbortSignal to AirLLM cancellation.
+  if (args.signal) {
+    if (args.signal.aborted) {
+      cancelAirLlmInference();
+      return;
+    }
+    args.signal.addEventListener('abort', () => cancelAirLlmInference(), { once: true });
+  }
+
+  await runAirLlmInference({
+    model: args.model,
+    prompt,
+    win: null,
+    onToken: tok => args.onToken(tok + ' ')
+  });
 };
 
 const streamOllama = async (args: StreamChatArgs): Promise<void> => {

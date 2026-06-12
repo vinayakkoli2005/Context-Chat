@@ -1,23 +1,20 @@
 import { app } from 'electron';
 import * as fs from 'fs';
 import * as path from 'path';
+import { spawnSync, spawn } from 'child_process';
 import { getSettings } from './store';
 
-// TurboVec (RyanCodrai/turbovec) is a Rust vector index with Python bindings
-// that implements Google's TurboQuant algorithm: 16× compression of vectors
-// (1536-dim float32 → 384 bytes at 2-bit) while beating FAISS on search speed.
+// TurboVec (RyanCodrai/turbovec) implements Google's TurboQuant algorithm:
+// 16× compression of vectors (1536-dim float32 → 384 bytes at 2-bit) while
+// beating FAISS on search speed. We run it as a Python sidecar so we don't
+// have to ship a Rust toolchain or a custom N-API addon.
 //
-// Integration strategy: TurboVec is Rust+Python, so we wrap it as either:
-//   (a) a native Node addon (turbovec-node — wraps the Rust crate via napi-rs), or
-//   (b) a Python sidecar (same pattern as airllm-bridge)
+// Sidecar protocol (resources/turbovec-runner.py):
+//   add    --index <path> --dim <int> --bits <int>  (records JSON on stdin)
+//   search --index <path> --dim <int> --bits <int> --top-k <int> --query <json>
 //
-// For v0.2.0 we ship strategy (b) — Python sidecar — to avoid a complex
-// Rust toolchain dependency at build time. The sidecar writes its index
-// files to userData/turbovec/ and we communicate via a small JSON-over-stdio
-// protocol.
-//
-// This file exposes the same interface as rag-store.ts so it can be swapped
-// in via the useTurbovec setting flag without changing CHAT_SEND.
+// On any failure or when the sidecar isn't installed, callers fall back
+// to LanceDB. TurboVec is opt-in via the useTurbovec setting flag.
 
 export type TurbovecStatus =
   | { available: false; reason: string }
@@ -30,10 +27,9 @@ export function isTurbovecEnabled(): boolean {
 function findPython(): string | null {
   const bundled = path.join(process.resourcesPath || '', 'python', 'python.exe');
   if (fs.existsSync(bundled)) return bundled;
-  const cp = require('child_process');
   for (const cmd of ['py', 'python']) {
     try {
-      const r = cp.spawnSync(cmd, ['--version'], {
+      const r = spawnSync(cmd, ['--version'], {
         stdio: 'ignore', windowsHide: true, timeout: 3000
       });
       if (r.status === 0) return cmd;
@@ -49,8 +45,7 @@ export function getTurbovecStatus(): TurbovecStatus {
   const python = findPython();
   if (!python) return { available: false, reason: 'python_not_found' };
 
-  const cp = require('child_process');
-  const check = cp.spawnSync(
+  const check = spawnSync(
     python,
     ['-c', 'import turbovec; print(turbovec.__version__)'],
     { stdio: 'pipe', windowsHide: true, timeout: 10000 }
@@ -67,36 +62,103 @@ export function getTurbovecIndexPath(): string {
   return path.join(dir, 'index.tv');
 }
 
-// Index lifecycle — these are stubs that the rag-store/memory-store
-// can call when isTurbovecEnabled() returns true. Each forwards to a
-// Python sidecar that performs the actual compression and search.
-//
-// Until a user actually enables Pro Mode and installs the Python
-// sidecar, the rag-store continues to use LanceDB (the default).
-// This is intentional: TurboVec is opt-in, not a forced replacement.
+function getRunnerPath(): string {
+  return path.join(process.resourcesPath || app.getAppPath(), 'turbovec-runner.py');
+}
 
 export async function ensureTurbovecReady(): Promise<{ ok: boolean; reason?: string }> {
   const status = getTurbovecStatus();
   if (!status.available) {
     return { ok: false, reason: (status as { reason: string }).reason };
   }
+  if (!fs.existsSync(getRunnerPath())) {
+    return { ok: false, reason: 'runner_script_missing' };
+  }
   return { ok: true };
 }
 
-// Stub interfaces matching rag-store.ts — to be implemented by the
-// Python sidecar in a follow-up. The wiring point exists so that
-// rag-store.ts and memory-store.ts can branch on the flag.
 export interface TurbovecRecord {
   id: string;
   content: string;
   source: string;
+  chunkIndex: number;
   vector: number[];
 }
 
-export async function turbovecAdd(_records: TurbovecRecord[]): Promise<void> {
-  throw new Error('TurboVec sidecar not implemented yet — falling back to LanceDB');
+export interface TurbovecSearchResult {
+  id: string;
+  content: string;
+  source: string;
+  chunkIndex: number;
+  score: number;
 }
 
-export async function turbovecSearch(_query: number[], _topK: number): Promise<TurbovecRecord[]> {
-  throw new Error('TurboVec sidecar not implemented yet — falling back to LanceDB');
+// Compression config — 2-bit gives 16× compression for the typical 1536-dim
+// embedding model (nomic-embed-text outputs 768-dim, so compression is ~8×).
+// Bits can be tuned later via setting; 2 is the published TurboQuant default.
+const TURBOVEC_BITS = 2;
+
+async function runSidecar(args: string[], stdinJson?: unknown): Promise<string> {
+  const status = getTurbovecStatus();
+  if (!status.available) {
+    throw new Error(`TurboVec unavailable: ${(status as { reason: string }).reason}`);
+  }
+  return new Promise((resolve, reject) => {
+    const child = spawn(status.pythonPath, [getRunnerPath(), ...args], {
+      stdio: ['pipe', 'pipe', 'pipe'],
+      windowsHide: true,
+      detached: false
+    });
+    let out = '';
+    let err = '';
+    child.stdout.on('data', d => { out += d.toString(); });
+    child.stderr.on('data', d => { err += d.toString(); });
+    child.on('exit', code => {
+      if (code === 0) resolve(out);
+      else reject(new Error(`turbovec sidecar exit ${code}: ${err.trim()}`));
+    });
+    child.on('error', reject);
+    if (stdinJson !== undefined) {
+      child.stdin.write(JSON.stringify(stdinJson));
+    }
+    child.stdin.end();
+  });
+}
+
+export async function turbovecAdd(records: TurbovecRecord[]): Promise<void> {
+  if (records.length === 0) return;
+  const dim = records[0].vector.length;
+  await runSidecar(
+    ['add', '--index', getTurbovecIndexPath(), '--dim', String(dim), '--bits', String(TURBOVEC_BITS)],
+    { records }
+  );
+}
+
+export async function turbovecSearch(
+  query: number[],
+  topK: number
+): Promise<TurbovecSearchResult[]> {
+  if (!fs.existsSync(getTurbovecIndexPath())) return [];
+  const out = await runSidecar(
+    [
+      'search',
+      '--index', getTurbovecIndexPath(),
+      '--dim', String(query.length),
+      '--bits', String(TURBOVEC_BITS),
+      '--top-k', String(topK)
+    ],
+    { query }
+  );
+  try {
+    const parsed = JSON.parse(out);
+    return parsed.results as TurbovecSearchResult[];
+  } catch (err) {
+    throw new Error(`Failed to parse TurboVec search output: ${err instanceof Error ? err.message : String(err)}`);
+  }
+}
+
+export async function turbovecDelete(source: string): Promise<void> {
+  await runSidecar(
+    ['delete', '--index', getTurbovecIndexPath(), '--source', source]
+  );
 }

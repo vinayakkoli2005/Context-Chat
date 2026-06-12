@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
+import type { Settings } from '../../shared/types';
 
 type OllamaStatus = { running: boolean; spawnedByApp: boolean; installed: boolean };
 type InstallProgress =
@@ -28,6 +29,18 @@ const LocalAI: React.FC = () => {
   const [showLogs, setShowLogs] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [settings, setLocalSettings] = useState<Settings | null>(null);
+
+  useEffect(() => {
+    window.cc.invoke(window.cc.channels.SETTINGS_GET).then((s: Settings) => setLocalSettings(s));
+  }, []);
+
+  const toggleSetting = async (key: 'enableAirLlmFallback' | 'useTurbovec') => {
+    if (!settings) return;
+    const next = { ...settings, [key]: !settings[key] };
+    setLocalSettings(next);
+    await window.cc.invoke(window.cc.channels.SETTINGS_SET, { [key]: next[key] });
+  };
 
   const refreshStatus = useCallback(async () => {
     try {
@@ -241,6 +254,49 @@ const LocalAI: React.FC = () => {
               </div>
             );
           })}
+        </div>
+      </section>
+
+      {/* Pro Mode toggles */}
+      <section className="mb-6">
+        <h3 className="text-sm font-semibold mb-2">Pro Mode</h3>
+        <p className="text-xs text-white/40 mb-3">
+          Advanced features. Both require a working Python install on your system.
+        </p>
+        <div className="space-y-3">
+          <label className="flex items-start gap-3 p-3 bg-gray-800 rounded border border-white/10 cursor-pointer hover:bg-gray-750">
+            <input
+              type="checkbox"
+              checked={settings?.enableAirLlmFallback ?? false}
+              onChange={() => toggleSetting('enableAirLlmFallback')}
+              className="mt-1"
+            />
+            <div className="flex-1">
+              <div className="text-sm font-medium">AirLLM fallback for large models</div>
+              <div className="text-xs text-white/50 mt-1">
+                When the chosen model exceeds available VRAM, route inference through
+                AirLLM&apos;s layer-by-layer runner instead of crashing. Enables 70B
+                models on as little as 4GB VRAM. Slower than Ollama for models that
+                fit normally — only used when needed.
+              </div>
+            </div>
+          </label>
+          <label className="flex items-start gap-3 p-3 bg-gray-800 rounded border border-white/10 cursor-pointer hover:bg-gray-750">
+            <input
+              type="checkbox"
+              checked={settings?.useTurbovec ?? false}
+              onChange={() => toggleSetting('useTurbovec')}
+              className="mt-1"
+            />
+            <div className="flex-1">
+              <div className="text-sm font-medium">TurboVec compressed vector index</div>
+              <div className="text-xs text-white/50 mt-1">
+                Store RAG vectors 16× smaller using TurboQuant compression. Lets
+                100,000+ chunks fit under 1GB RAM. Falls back to LanceDB if the
+                Python sidecar isn&apos;t installed — your data is never lost.
+              </div>
+            </div>
+          </label>
         </div>
       </section>
 
