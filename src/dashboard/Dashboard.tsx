@@ -7,13 +7,18 @@ import { HowToUse } from './tabs/HowToUse';
 import type { Settings } from '../shared/types';
 import Memories from './tabs/Memories';
 import KnowledgeBase from './tabs/KnowledgeBase';
+import LocalAI from './tabs/LocalAI';
+import Skills from './tabs/Skills';
+import Welcome from './Welcome';
 
-type Tab = 'home' | 'setup' | 'models' | 'history' | 'howto' | 'memories' | 'kb';
+type Tab = 'home' | 'setup' | 'models' | 'history' | 'howto' | 'memories' | 'kb' | 'localai' | 'skills';
 
 const TABS: { id: Tab; label: string }[] = [
   { id: 'home', label: 'Home' },
   { id: 'setup', label: 'Setup' },
+  { id: 'localai', label: 'Local AI' },
   { id: 'models', label: 'Models' },
+  { id: 'skills', label: 'Skills' },
   { id: 'history', label: 'History' },
   { id: 'kb', label: 'Knowledge Base' },
   { id: 'howto', label: 'How to Use' },
@@ -23,15 +28,31 @@ const TABS: { id: Tab; label: string }[] = [
 export const Dashboard: React.FC = () => {
   const [active, setActive] = useState<Tab>('home');
   const [ready, setReady] = useState(false);
+  const [showWelcome, setShowWelcome] = useState(false);
 
   useEffect(() => {
     window.cc.invoke(window.cc.channels.SETTINGS_GET)
-      .then((s: Settings) => { if (!s.hasCompletedSetup) setActive('setup'); })
+      .then((s: Settings) => {
+        // Show Welcome screen if user hasn't yet decided about auto-install
+        if (s.welcomeDecision === 'pending') {
+          setShowWelcome(true);
+        } else if (!s.hasCompletedSetup) {
+          setActive('setup');
+        }
+      })
       .catch(() => {})
       .finally(() => setReady(true));
   }, []);
 
   if (!ready) return <div className="h-screen bg-gray-900 flex items-center justify-center text-white/50 text-sm">Loading…</div>;
+
+  if (showWelcome) {
+    return (
+      <div className="h-screen bg-gray-900">
+        <Welcome onDone={() => { setShowWelcome(false); setActive('home'); }} />
+      </div>
+    );
+  }
 
   return (
     <div className="h-screen flex flex-col bg-gray-900 text-white text-sm select-none">
@@ -61,6 +82,8 @@ export const Dashboard: React.FC = () => {
         {active === 'howto' && <HowToUse />}
         {active === 'kb' && <KnowledgeBase />}
         {active === 'memories' && <Memories />}
+        {active === 'localai' && <LocalAI />}
+        {active === 'skills' && <Skills />}
       </div>
     </div>
   );

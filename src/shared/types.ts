@@ -21,6 +21,12 @@ export interface Settings {
   openaiApiKey: string;
   anthropicApiKey: string;
   hasCompletedSetup: boolean;
+
+  // zero-terminal additions
+  welcomeDecision: 'pending' | 'accepted' | 'declined';
+  activeSkillId: string | null;
+  enableAirLlmFallback: boolean;
+  useTurbovec: boolean;
 }
 
 export interface OllamaModel {
@@ -32,6 +38,8 @@ export interface HardwareInfo {
   totalRamGb: number;
   recommendedTextModel: string;
   recommendedVisionModel: string;
+  estimatedVramGb?: number;
+  shouldRecommendAirLlm?: boolean;
 }
 
 export type QuickAction = 'explain' | 'summarize' | 'ask';

@@ -38,6 +38,27 @@ export const IPC = {
   ANTHROPIC_STATUS: 'anthropic:status',
   SETUP_COMPLETE: 'setup:complete',
 
+  // zero-terminal ollama lifecycle
+  OLLAMA_INSTALL: 'ollama:install',
+  OLLAMA_INSTALL_PROGRESS: 'ollama:install:progress',
+  OLLAMA_START: 'ollama:start',
+  OLLAMA_STOP: 'ollama:stop',
+  OLLAMA_IS_INSTALLED: 'ollama:is-installed',
+  OLLAMA_LOGS: 'ollama:logs',
+  MODEL_PULL_CANCEL: 'model:pull:cancel',
+
+  // welcome / onboarding
+  WELCOME_GET_STATE: 'welcome:get-state',
+  WELCOME_SET_DECISION: 'welcome:set-decision',
+  WELCOME_AUTO_SETUP: 'welcome:auto-setup',
+  WELCOME_AUTO_SETUP_PROGRESS: 'welcome:auto-setup:progress',
+
+  // skills library
+  SKILL_LIST: 'skill:list',
+  SKILL_APPLY: 'skill:apply',
+  SKILL_CLEAR: 'skill:clear',
+  SKILL_GET_ACTIVE: 'skill:get-active',
+
   // screenshot button
   SCREENSHOT_BTN_CLICK: 'screenshotbtn:click',
   SCREENSHOT_BTN_DRAG: 'screenshotbtn:drag',

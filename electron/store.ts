@@ -9,6 +9,10 @@ const DEFAULTS: Settings = {
   openaiApiKey: '',
   anthropicApiKey: '',
   hasCompletedSetup: false,
+  welcomeDecision: 'pending',
+  activeSkillId: null,
+  enableAirLlmFallback: false,
+  useTurbovec: false,
 };
 
 let _store: Store<Settings> | null = null;
@@ -25,6 +29,10 @@ export const getSettings = (): Settings => ({
   openaiApiKey: store().get('openaiApiKey'),
   anthropicApiKey: store().get('anthropicApiKey'),
   hasCompletedSetup: store().get('hasCompletedSetup'),
+  welcomeDecision: store().get('welcomeDecision'),
+  activeSkillId: store().get('activeSkillId'),
+  enableAirLlmFallback: store().get('enableAirLlmFallback'),
+  useTurbovec: store().get('useTurbovec'),
 });
 
 export const setSettings = (patch: Partial<Settings>): Settings => {

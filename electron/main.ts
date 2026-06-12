@@ -17,6 +17,9 @@ import { extractMemories } from './memory-extractor';
 import { initRagStore, ragSearch } from './rag-store';
 import type { RagResult } from './rag-store';
 import { registerRagIpc } from './rag-ipc';
+import { registerOllamaLifecycleIpc } from './ollama-lifecycle-ipc';
+import { ensureOllamaRunning, stopOllama } from './ollama-manager';
+import { getActiveSkillPrompt } from './skill-library';
 
 let currentConversation: Conversation | null = null;
 let lastSelectionPos = { x: 100, y: 100 };
@@ -142,11 +145,13 @@ const registerIpc = (): void => {
     const ragBlock = ragChunks.length > 0
       ? `Relevant context from user's knowledge base:\n${ragChunks.map(c => c.content).join('\n\n')}\n\n`
       : '';
+    const skillPrompt = getActiveSkillPrompt();
+    const skillBlock = skillPrompt ? `${skillPrompt}\n\n` : '';
 
-    const messagesWithMemory = (memoryBlock || ragBlock)
+    const messagesWithMemory = (skillBlock || memoryBlock || ragBlock)
       ? currentConversation.messages.map((m, i) =>
           i === 0
-            ? { ...m, content: `${memoryBlock}${ragBlock}${m.content}` }
+            ? { ...m, content: `${skillBlock}${memoryBlock}${ragBlock}${m.content}` }
             : m
         )
       : currentConversation.messages;
@@ -311,6 +316,7 @@ const registerIpc = (): void => {
   });
 
   registerRagIpc();
+  registerOllamaLifecycleIpc();
   registerAudioIpc(() => BrowserWindow.getAllWindows()[0] ?? null);
 
   ipcMain.on(IPC.SCREENSHOT_BTN_CLICK, async () => {
@@ -360,7 +366,22 @@ const main = async (): Promise<void> => {
   globalShortcut.register('CommandOrControl+Shift+Space', openPanelForClipboard);
   globalShortcut.register('CommandOrControl+Shift+V', () => showVoiceOverlay());
   showScreenshotBtn();
-  app.on('will-quit', () => globalShortcut.unregisterAll());
+
+  // Zero-terminal: auto-start Ollama in the background if installed.
+  ensureOllamaRunning().catch(err => {
+    console.warn('[main] Ollama auto-start failed:', err);
+  });
+
+  let isQuitting = false;
+  app.on('will-quit', (event) => {
+    globalShortcut.unregisterAll();
+    if (isQuitting) return;
+    isQuitting = true;
+    event.preventDefault();
+    // Only kill the Ollama instance we ourselves spawned.
+    // stopOllama() is a no-op if Ollama was already running before us.
+    stopOllama().catch(() => undefined).finally(() => app.exit(0));
+  });
   app.on('window-all-closed', () => { /* keep alive in tray */ });
 };
 
