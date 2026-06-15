@@ -271,16 +271,20 @@
 
   <div class="guide-wrap">
     <h1>Setup Guide</h1>
-    <p class="subtitle">Everything you need to get ContextChat running — from first install to advanced configuration.</p>
+    <p class="subtitle">As of v0.2.0, ContextChat sets itself up for you — no terminal required. Just install the app and click one button. The manual steps below are kept for power users who want full control.</p>
 
     <!-- TOC -->
     <div class="toc">
       <h3>On this page</h3>
       <ol>
-        <li><a href="#install-ollama">Installing Ollama</a></li>
-        <li><a href="#ollama-serve">Running Ollama (ollama serve)</a></li>
-        <li><a href="#ollama-permanent">Keep Ollama Running Permanently</a></li>
-        <li><a href="#pull-models">Downloading Models</a></li>
+        <li><a href="#quick-start">Zero-Terminal Quick Start (Recommended)</a></li>
+        <li><a href="#local-ai-tab">Managing Local AI from the App</a></li>
+        <li><a href="#skills">Using the Skills Library</a></li>
+        <li><a href="#pro-mode">Pro Mode — AirLLM &amp; TurboVec</a></li>
+        <li><a href="#install-ollama">Manual: Installing Ollama (Advanced)</a></li>
+        <li><a href="#ollama-serve">Manual: Running Ollama (Advanced)</a></li>
+        <li><a href="#ollama-permanent">Manual: Keep Ollama Running (Advanced)</a></li>
+        <li><a href="#pull-models">Manual: Downloading Models (Advanced)</a></li>
         <li><a href="#install-app">Installing ContextChat</a></li>
         <li><a href="#api-providers">Using OpenAI or Anthropic Instead</a></li>
         <li><a href="#knowledge-base">Setting Up the Knowledge Base</a></li>
@@ -288,11 +292,111 @@
       </ol>
     </div>
 
+    <!-- 0. Zero-Terminal Quick Start -->
+    <div class="guide-section" id="quick-start">
+      <h2><span class="sec-icon">🚀</span> Zero-Terminal Quick Start</h2>
+      <div class="divider"></div>
+      <p class="section-desc">The fastest way to get running. You never open a command line — ContextChat installs Ollama, downloads the models, and starts the engine for you.</p>
+      <div class="step-list">
+        <div class="step-item">
+          <div class="num">1</div>
+          <div class="content">
+            <h4>Install &amp; open ContextChat</h4>
+            <p>Download <code>ContextChat-Setup.exe</code> from the releases page, run it, and launch the app. It appears in your system tray.</p>
+          </div>
+        </div>
+        <div class="step-item">
+          <div class="num">2</div>
+          <div class="content">
+            <h4>Click "Yes, set it up for me" on the Welcome screen</h4>
+            <p>On first launch a Welcome screen appears. One click kicks off the full setup: it silently installs Ollama, starts it, and pulls the embedding model (<code>nomic-embed-text</code>) plus a chat model matched to your hardware. A progress bar shows each step.</p>
+          </div>
+        </div>
+        <div class="step-item">
+          <div class="num">3</div>
+          <div class="content">
+            <h4>Start using it</h4>
+            <p>When the progress bar finishes, you're done. Select any text on screen, click the floating icon, and the AI responds — fully local, no terminal ever opened.</p>
+          </div>
+        </div>
+      </div>
+      <div class="alert alert-success">
+        <span class="alert-icon">✅</span>
+        <span>ContextChat only manages the Ollama instance it starts itself. If you already run Ollama your way, it leaves your instance untouched.</span>
+      </div>
+      <div class="alert alert-info">
+        <span class="alert-icon">ℹ️</span>
+        <span>Prefer to do it yourself? Choose "Decide later" on the Welcome screen and follow the manual sections further down this page.</span>
+      </div>
+    </div>
+
+    <!-- 0b. Local AI tab -->
+    <div class="guide-section" id="local-ai-tab">
+      <h2><span class="sec-icon">🎛️</span> Managing Local AI from the App</h2>
+      <div class="divider"></div>
+      <p class="section-desc">Everything you used to do in a terminal now lives in the <strong>Local AI</strong> tab of the Dashboard — with buttons and progress bars instead of commands.</p>
+      <div class="scenario">
+        <h4>🟢 Status banner</h4>
+        <p>A green/red dot shows at a glance whether Ollama is running and whether ContextChat is managing it.</p>
+      </div>
+      <div class="scenario">
+        <h4>📦 Install &amp; run</h4>
+        <p>Buttons to install Ollama (silent, with a download progress bar) and to Start / Stop the managed instance — no <code>ollama serve</code> needed.</p>
+      </div>
+      <div class="scenario">
+        <h4>⬇️ Download models</h4>
+        <p>Pull <code>nomic-embed-text</code> and your chat model with per-model progress bars and a Cancel button. Re-pull any time.</p>
+      </div>
+      <div class="scenario">
+        <h4>📜 System logs</h4>
+        <p>A built-in log viewer streams Ollama's output so you can see what's happening — no console window.</p>
+      </div>
+    </div>
+
+    <!-- 0c. Skills -->
+    <div class="guide-section" id="skills">
+      <h2><span class="sec-icon">✨</span> Using the Skills Library</h2>
+      <div class="divider"></div>
+      <p class="section-desc">Skills are expert prompt templates. Activate one and every reply follows that playbook until you switch it off. Open the <strong>Skills</strong> tab in the Dashboard to browse them.</p>
+      <div class="scenario">
+        <h4>Eight built-in skills</h4>
+        <ul>
+          <li><strong>Writing:</strong> Summarize, Rewrite Clearly, Extract Action Items</li>
+          <li><strong>Coding:</strong> Code Review, Explain Code, Commit Message, Find Bugs</li>
+          <li><strong>Analysis:</strong> Explain Error</li>
+        </ul>
+        <p style="margin-top:10px">Click a skill to activate it (highlighted blue). Click again or hit Clear to turn it off. The active skill is injected as a system-prompt prefix on every chat, so small local models punch above their weight.</p>
+      </div>
+    </div>
+
+    <!-- 0d. Pro Mode -->
+    <div class="guide-section" id="pro-mode">
+      <h2><span class="sec-icon">⚡</span> Pro Mode — AirLLM &amp; TurboVec</h2>
+      <div class="divider"></div>
+      <p class="section-desc">Two opt-in power features in <strong>Local AI → Pro Mode</strong>. Both need a working Python install and gracefully fall back if it's missing — you never lose data or get a crash.</p>
+      <div class="scenario">
+        <h4>🪶 AirLLM fallback for large models</h4>
+        <p>When a model is too big for your VRAM, inference is routed through AirLLM's layer-by-layer runner instead of failing — running 70B models on as little as 4&nbsp;GB VRAM. Only kicks in when needed; models that fit normally still use fast Ollama.</p>
+        <div class="code-block"><span class="comment"># one-time, only if you enable AirLLM</span>
+pip install airllm</div>
+      </div>
+      <div class="scenario">
+        <h4>🗜️ TurboVec compressed vector index</h4>
+        <p>Stores your RAG vectors 16× smaller using Google's TurboQuant (2-bit) compression, so 100,000+ document chunks fit under 1&nbsp;GB of RAM. Falls back to LanceDB automatically if the sidecar isn't installed.</p>
+        <div class="code-block"><span class="comment"># one-time, only if you enable TurboVec</span>
+pip install turbovec</div>
+      </div>
+      <div class="alert alert-info">
+        <span class="alert-icon">ℹ️</span>
+        <span>Pro Mode is entirely optional. Leave both toggles off and ContextChat runs great on plain Ollama + LanceDB.</span>
+      </div>
+    </div>
+
     <!-- 1. Install Ollama -->
     <div class="guide-section" id="install-ollama">
-      <h2><span class="sec-icon">📦</span> Installing Ollama</h2>
+      <h2><span class="sec-icon">📦</span> Manual: Installing Ollama <span style="font-size:12px;font-weight:600;color:var(--text-mute);font-family:'JetBrains Mono',monospace;">ADVANCED</span></h2>
       <div class="divider"></div>
-      <p class="section-desc">Ollama is the local AI runtime that powers ContextChat. It runs entirely on your machine — no account, no cloud.</p>
+      <p class="section-desc">You only need this if you skipped the zero-terminal Quick Start above. Ollama is the local AI runtime that powers ContextChat. It runs entirely on your machine — no account, no cloud.</p>
       <div class="step-list">
         <div class="step-item">
           <div class="num">1</div>
@@ -331,7 +435,7 @@ choco install ollama</div>
 
     <!-- 2. ollama serve -->
     <div class="guide-section" id="ollama-serve">
-      <h2><span class="sec-icon">▶️</span> Running Ollama</h2>
+      <h2><span class="sec-icon">▶️</span> Manual: Running Ollama <span style="font-size:12px;font-weight:600;color:var(--text-mute);font-family:'JetBrains Mono',monospace;">ADVANCED</span></h2>
       <div class="divider"></div>
       <p class="section-desc">ContextChat needs Ollama's API server to be running. Here's how to start it.</p>
       <div class="step-list">
@@ -365,7 +469,7 @@ choco install ollama</div>
 
     <!-- 3. Permanent -->
     <div class="guide-section" id="ollama-permanent">
-      <h2><span class="sec-icon">🔄</span> Keep Ollama Running Permanently</h2>
+      <h2><span class="sec-icon">🔄</span> Manual: Keep Ollama Running Permanently <span style="font-size:12px;font-weight:600;color:var(--text-mute);font-family:'JetBrains Mono',monospace;">ADVANCED</span></h2>
       <div class="divider"></div>
       <p class="section-desc">Don't want to manually start Ollama every time? Set it up to run automatically on Windows startup.</p>
 
@@ -403,7 +507,7 @@ nssm start Ollama</div>
 
     <!-- 4. Pull models -->
     <div class="guide-section" id="pull-models">
-      <h2><span class="sec-icon">⬇️</span> Downloading Models</h2>
+      <h2><span class="sec-icon">⬇️</span> Manual: Downloading Models <span style="font-size:12px;font-weight:600;color:var(--text-mute);font-family:'JetBrains Mono',monospace;">ADVANCED</span></h2>
       <div class="divider"></div>
       <p class="section-desc">ContextChat needs at least one chat model and one embedding model. Here's what to download.</p>
 
@@ -460,7 +564,7 @@ nssm start Ollama</div>
           <div class="num">2</div>
           <div class="content">
             <h4>First launch</h4>
-            <p>ContextChat appears in your system tray (bottom-right). The setup wizard will open automatically — enter your Ollama URL (<code>http://localhost:11434</code>) and select a model.</p>
+            <p>ContextChat appears in your system tray (bottom-right). A Welcome screen opens — click <strong>"Yes, set it up for me"</strong> to auto-install Ollama and download models (see the Quick Start above), or "Decide later" to configure it yourself in the Local AI tab.</p>
           </div>
         </div>
         <div class="step-item">
@@ -555,8 +659,9 @@ nssm start Ollama</div>
       <div class="scenario">
         <h4>❌ "Ollama is not running" error in ContextChat</h4>
         <ul>
-          <li>Open PowerShell and run <code>ollama serve</code></li>
-          <li>Check the tray icon — Ollama may have crashed</li>
+          <li>Easiest fix: open the <strong>Local AI</strong> tab and click <strong>Start Ollama</strong> — the app handles it for you</li>
+          <li>Or open PowerShell and run <code>ollama serve</code></li>
+          <li>Check the tray icon — Ollama may have crashed (the app auto-restarts it up to 3 times)</li>
           <li>Verify with <code>curl http://localhost:11434/api/tags</code></li>
           <li>If port 11434 is in use: <code>netstat -ano | findstr 11434</code> then kill the conflicting process</li>
         </ul>
