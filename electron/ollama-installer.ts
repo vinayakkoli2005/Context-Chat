@@ -72,6 +72,40 @@ function downloadFile(url: string, dest: string, onProgress: (bytes: number, tot
   });
 }
 
+// Verify the downloaded installer's Authenticode signature before executing it.
+// HTTPS authenticates the download channel but not the bytes; a network attacker
+// (rogue CA, MITM proxy, hijacked CDN) could otherwise swap in a trojaned exe
+// that we run silently. We can't pin a SHA-256 because the URL is a rolling
+// "latest", so instead we require a VALID signature from the expected publisher.
+function verifyAuthenticode(filePath: string, expectedSigner: RegExp): Promise<void> {
+  return new Promise((resolve, reject) => {
+    // Path is app-controlled (userData), but double any quote for a safe PS literal.
+    const safePath = filePath.replace(/'/g, "''");
+    const script = `$ErrorActionPreference='Stop'; $s = Get-AuthenticodeSignature -LiteralPath '${safePath}'; Write-Output $s.Status; if ($s.SignerCertificate) { Write-Output $s.SignerCertificate.Subject } else { Write-Output '' }`;
+    const ps = spawn('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', script], {
+      windowsHide: true,
+      stdio: ['ignore', 'pipe', 'pipe'],
+    });
+    let out = '';
+    ps.stdout.on('data', d => { out += d.toString(); });
+    ps.on('error', reject);
+    ps.on('exit', () => {
+      const lines = out.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+      const status = lines[0] ?? '';
+      const subject = lines.slice(1).join(' ');
+      if (status !== 'Valid') {
+        reject(new Error(`Installer signature is not valid (status: ${status || 'unknown'}). Refusing to run a possibly tampered file.`));
+        return;
+      }
+      if (!expectedSigner.test(subject)) {
+        reject(new Error(`Installer signed by an unexpected publisher (${subject || 'unknown'}). Refusing to run.`));
+        return;
+      }
+      resolve();
+    });
+  });
+}
+
 function runSilentInstaller(installerPath: string): Promise<void> {
   return new Promise((resolve, reject) => {
     const child = spawn(installerPath, ['/S'], {
@@ -101,6 +135,9 @@ export async function installOllama(win: BrowserWindow | null): Promise<void> {
       const percent = total > 0 ? Math.floor((bytes / total) * 100) : 0;
       sendProgress(win, { phase: 'downloading', percent, bytes, total });
     });
+
+    // Reject anything not validly signed by Ollama before we execute it.
+    await verifyAuthenticode(installerPath, /Ollama/i);
 
     sendProgress(win, { phase: 'installing' });
     await runSilentInstaller(installerPath);

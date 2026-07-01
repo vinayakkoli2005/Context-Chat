@@ -139,8 +139,11 @@ export async function ingestFile(
   }
   const table = await db.openTable(TABLE_NAME);
 
-  // Delete existing chunks for this source (re-index on re-add)
-  const safeSrc = source.replace(/'/g, "\\'");
+  // Delete existing chunks for this source (re-index on re-add).
+  // Escape single quotes by doubling them — LanceDB/DataFusion string literals
+  // use '' for a literal quote, not backslash. Backslash-escaping leaves a live
+  // quote that a crafted filename could use to break out of the predicate.
+  const safeSrc = source.replace(/'/g, "''");
   await table.delete(`source = '${safeSrc}'`);
 
   const chunkStrings = chunkText(text);
@@ -217,7 +220,8 @@ export async function deleteRagFile(source: string): Promise<void> {
     const tables = await db.tableNames();
     if (!tables.includes(TABLE_NAME)) return;
     const table = await db.openTable(TABLE_NAME);
-    const safeSrc = source.replace(/'/g, "\\'");
+    // Double single quotes to escape them for the DataFusion SQL predicate.
+    const safeSrc = source.replace(/'/g, "''");
     await table.delete(`source = '${safeSrc}'`);
   } catch (err) {
     console.warn('deleteRagFile failed:', err);

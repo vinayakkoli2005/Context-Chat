@@ -354,6 +354,20 @@ const registerIpc = (): void => {
 const main = async (): Promise<void> => {
   if (!ensureSingleInstance()) return;
   await app.whenReady();
+
+  // Defense-in-depth: block any window from navigating to remote origins or
+  // spawning new windows. Our UI is entirely local (file:// or the dev server),
+  // so nothing legitimate needs this — it just closes off an avenue for loaded
+  // content to reach the web or open attacker-controlled pages.
+  app.on('web-contents-created', (_e, contents) => {
+    contents.setWindowOpenHandler(() => ({ action: 'deny' }));
+    contents.on('will-navigate', (event, url) => {
+      const devOrigin = process.env['ELECTRON_RENDERER_URL'];
+      const allowed = url.startsWith('file://') || (!!devOrigin && url.startsWith(devOrigin));
+      if (!allowed) event.preventDefault();
+    });
+  });
+
   await initMemoryStore().catch(err => console.warn('Memory store init failed:', err));
   await initRagStore().catch(err => console.warn('RAG store init failed:', err));
   app.setAppUserModelId('com.contextchat.desktop');
