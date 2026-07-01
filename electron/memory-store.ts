@@ -83,6 +83,17 @@ export const deleteMemory = async (id: string, dbPathOverride?: string): Promise
   }
 };
 
+export const clearAllMemories = async (dbPathOverride?: string): Promise<void> => {
+  try {
+    const db = await connect(getDbPath(dbPathOverride));
+    const table = await db.openTable(TABLE_NAME);
+    // Delete every row. LanceDB requires a predicate; this always matches.
+    await table.delete('id IS NOT NULL');
+  } catch (err) {
+    console.warn('clearAllMemories failed:', err);
+  }
+};
+
 export const countMemories = async (dbPathOverride?: string): Promise<number> => {
   try {
     const db = await connect(getDbPath(dbPathOverride));

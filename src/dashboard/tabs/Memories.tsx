@@ -29,10 +29,32 @@ export default function Memories() {
     load();
   };
 
+  const handlePurge = async () => {
+    if (!window.confirm('Forget everything? This permanently deletes every memory ContextChat has stored about you. This cannot be undone.')) return;
+    await window.cc.invoke(window.cc.channels.MEMORY_PURGE).catch(() => {});
+    load();
+  };
+
   if (loading) return <div className="p-4 text-sm text-gray-400">Loading memories...</div>;
 
   return (
     <div className="p-4 flex flex-col gap-4">
+      <div className="flex items-center justify-between">
+        <span className="text-sm text-gray-300">
+          {memories.length === 0
+            ? 'Nothing remembered yet'
+            : `${memories.length} thing${memories.length === 1 ? '' : 's'} remembered about you`}
+        </span>
+        {memories.length > 0 && (
+          <button
+            onClick={handlePurge}
+            className="rounded border border-red-500/40 px-2.5 py-1 text-xs text-red-300 hover:bg-red-500/10"
+          >
+            Forget everything
+          </button>
+        )}
+      </div>
+
       <div className="flex gap-2">
         <input
           className="flex-1 rounded border border-gray-600 bg-gray-800 px-3 py-1.5 text-sm text-white placeholder-gray-400 focus:outline-none focus:border-blue-500"

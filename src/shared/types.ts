@@ -1,9 +1,19 @@
 export type Role = 'system' | 'user' | 'assistant';
 
+export interface UsedMemory {
+  id: string;
+  content: string;
+  type: 'fact' | 'preference' | 'project';
+}
+
 export interface Message {
   role: Role;
   content: string;
   image?: string;
+  /** Memories that were retrieved and fed to the model for this answer. */
+  usedMemories?: UsedMemory[];
+  /** Knowledge-base source files whose chunks were fed to the model. */
+  usedSources?: string[];
 }
 
 export interface Conversation {

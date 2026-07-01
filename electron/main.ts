@@ -12,7 +12,7 @@ import { createConversation, appendMessage, applyRollingWindow } from './convers
 import { appendHistory, getHistory, deleteHistoryEntry, exportHistoryMarkdown } from './history-store';
 import type { Conversation, Message, HistoryEntry } from '../src/shared/types';
 import type { Memory } from '../src/shared/types';
-import { initMemoryStore, insertMemory, searchMemories, listAllMemories, deleteMemory, countMemories } from './memory-store';
+import { initMemoryStore, insertMemory, searchMemories, listAllMemories, deleteMemory, countMemories, clearAllMemories } from './memory-store';
 import { extractMemories } from './memory-extractor';
 import { initRagStore, ragSearch } from './rag-store';
 import type { RagResult } from './rag-store';
@@ -172,12 +172,17 @@ const registerIpc = (): void => {
         },
         signal: currentAbortController.signal,
       });
-      if (ragChunks.length > 0) {
-        const uniqueSources = [...new Set(ragChunks.map(c => c.source))];
-        assistantBuffer += `\n\n---\n📄 Sources: ${uniqueSources.join(', ')}`;
-      }
-      currentConversation = appendMessage(currentConversation, { role: 'assistant', content: assistantBuffer });
-      win?.webContents.send(IPC.CHAT_DONE, {});
+      // Surface exactly which memories and documents fed this answer, so the
+      // user can see the receipt and delete anything they don't want remembered.
+      const usedMemories = memories.map(mem => ({ id: mem.id, content: mem.content, type: mem.type }));
+      const usedSources = [...new Set(ragChunks.map(c => c.source))];
+      currentConversation = appendMessage(currentConversation, {
+        role: 'assistant',
+        content: assistantBuffer,
+        ...(usedMemories.length > 0 ? { usedMemories } : {}),
+        ...(usedSources.length > 0 ? { usedSources } : {}),
+      });
+      win?.webContents.send(IPC.CHAT_DONE, { usedMemories, usedSources });
       // Save completed conversation to history
       if (currentConversation) {
         appendHistory({
@@ -212,6 +217,7 @@ const registerIpc = (): void => {
   ipcMain.handle(IPC.MEMORY_LIST, () => listAllMemories());
   ipcMain.handle(IPC.MEMORY_COUNT, () => countMemories());
   ipcMain.handle(IPC.MEMORY_DELETE, (_e, id: string) => deleteMemory(id));
+  ipcMain.handle(IPC.MEMORY_PURGE, () => clearAllMemories());
   ipcMain.handle(IPC.MEMORY_ADD, (_e, payload: { content: string; type: Memory['type'] }) => {
     if (!payload?.content?.trim()) return null;
     const { ollamaUrl } = getSettings();

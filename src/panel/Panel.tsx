@@ -52,10 +52,15 @@ export const Panel: React.FC = () => {
       });
     });
     const offTok  = window.cc.on(window.cc.channels.CHAT_TOKEN, (p: { delta: string }) => setStreamBuffer((s) => s + p.delta));
-    const offDone = window.cc.on(window.cc.channels.CHAT_DONE, () => {
+    const offDone = window.cc.on(window.cc.channels.CHAT_DONE, (p: { usedMemories?: Message['usedMemories']; usedSources?: string[] } = {}) => {
       setStreaming(false);
       setStreamBuffer((buf) => {
-        if (buf) setMessages((m) => [...m, { role: 'assistant', content: buf }]);
+        if (buf) setMessages((m) => [...m, {
+          role: 'assistant',
+          content: buf,
+          ...(p.usedMemories?.length ? { usedMemories: p.usedMemories } : {}),
+          ...(p.usedSources?.length ? { usedSources: p.usedSources } : {}),
+        }]);
         return '';
       });
     });
